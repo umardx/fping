@@ -1,7 +1,7 @@
 package main
 
 import (
-    "github.com/influxdb/influxdb/client"
+    "github.com/influxdata/influxdb/client"
     "github.com/pelletier/go-toml"
     "fmt"
     "log"
@@ -66,7 +66,7 @@ func readPoints(config *toml.TomlTree, con *client.Client) {
                 td := strings.FieldsFunc(times, slashSplitter)
                 min, avg, max = td[0], td[1], td[2]
             }
-            //log.Printf("Host:%s, loss: %s, min: %s, avg: %s, max: %s", host, lossp, min, avg, max)
+            log.Printf("Host:%s, loss: %s, min: %s, avg: %s, max: %s", host, lossp, min, avg, max)
             writePoints(config, con, host, sent, recv, lossp, min, avg, max)
         }
     }
@@ -109,7 +109,7 @@ func writePoints(config *toml.TomlTree, con *client.Client, host string, sent st
     bps := client.BatchPoints{
         Points:          pts,
         Database:        db,
-        RetentionPolicy: "default",
+        RetentionPolicy: "infinite", // add the name of the configured retention policy.
     }
     _, err := con.Write(bps)
     if err != nil {
@@ -126,7 +126,7 @@ func main() {
 
     host := config.Get("influxdb.host").(string)
     port := config.Get("influxdb.port").(string)
-    //measurement := config.Get("influxdb.measurement").(string)
+    measurement := config.Get("influxdb.measurement").(string)
     username := config.Get("influxdb.user").(string)
     password := config.Get("influxdb.pass").(string)
 
