@@ -25,7 +25,7 @@ func perr(err error) {
 	}
 }
 
-func readPoints(config *toml.TomlTree, con *client.Client) {
+func readPoints(config *toml.Tree, con *client.Client) {
 	urls := config.Get("urls.urls").([]interface{})
 	log.Printf("Going to fetch the following urls: %q", urls)
 	for {
@@ -49,7 +49,7 @@ func readPoints(config *toml.TomlTree, con *client.Client) {
 	}
 }
 
-func writePoints(config *toml.TomlTree, con *client.Client, url string, code int, bytes int, elapsed float64) {
+func writePoints(config *toml.Tree, con *client.Client, url string, code int, bytes int, elapsed float64) {
 	db := config.Get("influxdb.db").(string)
 	pts := make([]client.Point, 1)
 	fields := map[string]interface{}{}
@@ -71,7 +71,7 @@ func writePoints(config *toml.TomlTree, con *client.Client, url string, code int
 	bps := client.BatchPoints{
 		Points:          pts,
 		Database:        db,
-		RetentionPolicy: "default",
+		RetentionPolicy: "infinite",
 	}
 	_, err := con.Write(bps)
 	perr(err)

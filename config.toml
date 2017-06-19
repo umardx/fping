@@ -1,16 +1,16 @@
 [influxdb]
 
-host = "127.0.0.1"
+host = "192.168.114.30"
 port = "8086"
-db = "smokeping_db"
+db = "fping"
 measurement = "ping"
-user = "admin"
-pass = "admin5Up3RSecr3tP4aSsW0rd4GhL6AzXf"
+user = "fping"
+pass = "fpingd18071702c48"
 
 [hosts]
 
 hosts = [
-    "127.0.0.1",
-    "8.8.8.8",
-    "itb.ac.id"
+    "localhost",
+    "bukalapak.com",
+    "udx.web.id"
 ]
