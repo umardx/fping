@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"github.com/coreos/go-systemd/daemon" // Add this for daemonized Infping
 	"github.com/influxdata/influxdb/client"
 	"github.com/pelletier/go-toml"
 	"log"
@@ -12,6 +13,10 @@ import (
 	"strconv"
 	"strings"
 	"time"
+)
+
+const (
+	path = "/home/umar/go/src/github.com/umardx/fping/config.toml"
 )
 
 func herr(err error) {
@@ -66,7 +71,7 @@ func readPoints(config *toml.Tree, con *client.Client) {
 				td := strings.FieldsFunc(times, slashSplitter)
 				min, avg, max = td[0], td[1], td[2]
 			}
-			//log.Printf("Host:%s, loss: %s, min: %s, avg: %s, max: %s", host, lossp, min, avg, max)
+			log.Printf("Host:%s, loss: %s, min: %s, avg: %s, max: %s", host, lossp, min, avg, max)
 			writePoints(config, con, host, sent, recv, lossp, min, avg, max)
 		}
 	}
@@ -115,10 +120,11 @@ func writePoints(config *toml.Tree, con *client.Client, host string, sent string
 	if err != nil {
 		log.Fatal(err)
 	}
+	daemon.SdNotify(false, "READY=1") // daemon fping
 }
 
 func main() {
-	config, err := toml.LoadFile("config.toml")
+	config, err := toml.LoadFile(path)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
 		os.Exit(1)
