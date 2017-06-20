@@ -7,10 +7,22 @@ measurement = "ping"
 user = "fping"
 pass = "fpingd18071702c48"
 
+[consul]
+
+user = "a"
+pass = "a"
+host = "consul1.dx"
+port = 80
+location = "/v1/catalog/nodes"
+
+
 [hosts]
+nodes = [
+	"b827eb3068d3am13k",
+	"consulnode"
+]
 
 hosts = [
-    "localhost",
-    "bukalapak.com",
-    "udx.web.id"
+    "192.168.200.121",
+	"192.168.114.30"
 ]

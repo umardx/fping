@@ -2,11 +2,14 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"github.com/coreos/go-systemd/daemon" // Add this for daemonized Infping
 	"github.com/influxdata/influxdb/client"
 	"github.com/pelletier/go-toml"
+	"io/ioutil"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"os/exec"
@@ -16,8 +19,23 @@ import (
 )
 
 const (
-	path = "/home/umar/go/src/github.com/umardx/fping/config.toml"
+	path = "config.toml"
 )
+
+type Consul []struct {
+	ID              string `json:"ID"`
+	Node            string `json:"Node"`
+	Address         string `json:"Address"`
+	Datacenter      string `json:"Datacenter"`
+	TaggedAddresses struct {
+		Lan string `json:"lan"`
+		Wan string `json:"wan"`
+	} `json:"TaggedAddresses"`
+	Meta struct {
+	} `json:"Meta"`
+	CreateIndex int `json:"CreateIndex"`
+	ModifyIndex int `json:"ModifyIndex"`
+}
 
 func herr(err error) {
 	if err != nil {
@@ -36,9 +54,41 @@ func slashSplitter(c rune) bool {
 	return c == '/'
 }
 
+func getJson(url string) string {
+	resp, err := http.Get(url)
+	herr(err)
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	perr(err)
+
+	return string(body)
+}
+
+func parseHost(url string) {
+	data := getJson(url)
+	//fmt.Println(len(data))
+	//fmt.Println(data)
+	if len(data) > 2 {
+		cfg := Consul{}
+		err := json.Unmarshal([]byte(data), &cfg)
+		if err != nil {
+			fmt.Printf("Error Unmashal: %v\n", err)
+		} else {
+
+			for list := range cfg {
+				fmt.Printf("ID :%s\n", cfg[list].ID)
+				fmt.Printf("Node :%s\n", cfg[list].Node)
+				fmt.Printf("Address :%s\n", cfg[list].Address)
+			}
+		}
+	}
+}
+
 func readPoints(config *toml.Tree, con *client.Client) {
 	args := []string{"-B 1", "-D", "-r0", "-O 0", "-Q 10", "-p 1000", "-l"}
 	hosts := config.Get("hosts.hosts").([]interface{})
+	log.Println("Debug here")
 	for _, v := range hosts {
 		host, _ := v.(string)
 		args = append(args, host)
@@ -140,7 +190,6 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	conf := client.Config{
 		URL:      *u,
 		Username: username,
