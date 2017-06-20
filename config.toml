@@ -9,11 +9,7 @@ pass = "fpingd18071702c48"
 
 [consul]
 
-user = "a"
-pass = "a"
-host = "consul1.dx"
-port = 80
-location = "/v1/catalog/nodes"
+url = "http://localhost/v1/catalog/nodes"
 
 
 [hosts]
@@ -23,6 +19,6 @@ nodes = [
 ]
 
 hosts = [
-    "192.168.200.121",
-	"192.168.114.30"
+"192.168.200.121",
+"192.168.114.30"
 ]

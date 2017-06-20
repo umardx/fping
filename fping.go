@@ -13,13 +13,15 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	_ "reflect"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	path = "config.toml"
+	path       = "config.toml"
+	url_consul = "http://a:a@consul1.dx/v1/catalog/nodes"
 )
 
 type Consul []struct {
@@ -35,6 +37,44 @@ type Consul []struct {
 	} `json:"Meta"`
 	CreateIndex int `json:"CreateIndex"`
 	ModifyIndex int `json:"ModifyIndex"`
+}
+
+func getJson(url string) (json string) {
+	resp, err := http.Get(url)
+	herr(err)
+
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	perr(err)
+
+	if resp.StatusCode == 200 {
+		json = string(body)
+	} else {
+		log.Println(resp.Status)
+		json = "[]"
+	}
+
+	return json
+}
+
+func getHost(url string) (ipmap map[string]string, nodes []string, hosts []string) {
+	ipmap = make(map[string]string)
+	data := getJson(url)
+	cfg := Consul{}
+	err := json.Unmarshal([]byte(data), &cfg)
+	perr(err)
+	for v := range cfg {
+		nodes = append(nodes, cfg[v].Node)
+		hosts = append(hosts, cfg[v].Address)
+		ipmap[cfg[v].Node] = cfg[v].Address
+	}
+
+	for v := range ipmap {
+		log.Printf("%s:%s", v, ipmap[v])
+	}
+	log.Println(nodes)
+	return
 }
 
 func herr(err error) {
@@ -54,45 +94,16 @@ func slashSplitter(c rune) bool {
 	return c == '/'
 }
 
-func getJson(url string) string {
-	resp, err := http.Get(url)
-	herr(err)
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	perr(err)
-
-	return string(body)
-}
-
-func parseHost(url string) {
-	data := getJson(url)
-	//fmt.Println(len(data))
-	//fmt.Println(data)
-	if len(data) > 2 {
-		cfg := Consul{}
-		err := json.Unmarshal([]byte(data), &cfg)
-		if err != nil {
-			fmt.Printf("Error Unmashal: %v\n", err)
-		} else {
-
-			for list := range cfg {
-				fmt.Printf("ID :%s\n", cfg[list].ID)
-				fmt.Printf("Node :%s\n", cfg[list].Node)
-				fmt.Printf("Address :%s\n", cfg[list].Address)
-			}
-		}
-	}
-}
-
 func readPoints(config *toml.Tree, con *client.Client) {
 	args := []string{"-B 1", "-D", "-r0", "-O 0", "-Q 10", "-p 1000", "-l"}
+	// Parsing hosts
+
 	hosts := config.Get("hosts.hosts").([]interface{})
-	log.Println("Debug here")
 	for _, v := range hosts {
 		host, _ := v.(string)
 		args = append(args, host)
 	}
+
 	log.Printf("Going to ping the following hosts: %q", hosts)
 	cmd := exec.Command("/usr/bin/fping", args...)
 	stdout, err := cmd.StdoutPipe()
@@ -174,6 +185,7 @@ func writePoints(config *toml.Tree, con *client.Client, host string, sent string
 }
 
 func main() {
+	getHost(url_consul)
 	config, err := toml.LoadFile(path)
 	if err != nil {
 		fmt.Println("Error:", err.Error())
