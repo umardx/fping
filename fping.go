@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/coreos/go-systemd/daemon" // Add this for daemonized Infping
 	"github.com/influxdata/influxdb/client"
 	"github.com/pelletier/go-toml"
 	"io/ioutil"
@@ -13,15 +12,22 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	_ "reflect"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const (
-	path       = "config.toml"
-	url_consul = "http://a:a@consul1.dx/v1/catalog/nodes"
+	path = "config.toml"
+)
+
+var (
+	newnodes = make(map[string]string)
+	oldnodes = make(map[string]string)
+	config   *toml.Tree
+	con      *client.Client
+	change   bool = false
 )
 
 type Consul []struct {
@@ -37,6 +43,38 @@ type Consul []struct {
 	} `json:"Meta"`
 	CreateIndex int `json:"CreateIndex"`
 	ModifyIndex int `json:"ModifyIndex"`
+}
+
+func watchNodes(consulurl string) {
+	var first bool = true
+	for {
+		newnodes = getNodes(consulurl)
+		// Check if any change of consul nodes
+		if reflect.DeepEqual(newnodes, oldnodes) {
+			// give time for requests newnodes
+			time.Sleep(10 * time.Second)
+		} else {
+			if first {
+				first = false
+			} else {
+				log.Println("Nodes updated : Restarting fping")
+				change = true
+			}
+			oldnodes = newnodes
+		}
+	}
+}
+
+func getNodes(consulurl string) (nodes map[string]string) {
+	nodes = make(map[string]string)
+	data := getJson(consulurl)
+	cfg := Consul{}
+	err := json.Unmarshal([]byte(data), &cfg)
+	perr(err)
+	for v := range cfg {
+		nodes[cfg[v].Address] = cfg[v].Node
+	}
+	return
 }
 
 func getJson(url string) (json string) {
@@ -58,25 +96,6 @@ func getJson(url string) (json string) {
 	return json
 }
 
-func getHost(url string) (ipmap map[string]string, nodes []string, hosts []string) {
-	ipmap = make(map[string]string)
-	data := getJson(url)
-	cfg := Consul{}
-	err := json.Unmarshal([]byte(data), &cfg)
-	perr(err)
-	for v := range cfg {
-		nodes = append(nodes, cfg[v].Node)
-		hosts = append(hosts, cfg[v].Address)
-		ipmap[cfg[v].Node] = cfg[v].Address
-	}
-
-	for v := range ipmap {
-		log.Printf("%s:%s", v, ipmap[v])
-	}
-	log.Println(nodes)
-	return
-}
-
 func herr(err error) {
 	if err != nil {
 		fmt.Println(err)
@@ -94,17 +113,18 @@ func slashSplitter(c rune) bool {
 	return c == '/'
 }
 
-func readPoints(config *toml.Tree, con *client.Client) {
-	args := []string{"-B 1", "-D", "-r0", "-O 0", "-Q 10", "-p 1000", "-l"}
-	// Parsing hosts
+func readPoints(config *toml.Tree, con *client.Client, nodes map[string]string) {
 
-	hosts := config.Get("hosts.hosts").([]interface{})
-	for _, v := range hosts {
-		host, _ := v.(string)
-		args = append(args, host)
+	args := []string{"-B 1", "-D", "-r0", "-O 0", "-Q 10", "-p 1000", "-l"}
+	list := []string{}
+	for u := range nodes {
+		ip := u
+		args = append(args, ip)
+		list = append(list, ip)
+
 	}
 
-	log.Printf("Going to ping the following hosts: %q", hosts)
+	log.Printf("Going to ping the following ips: %v", list)
 	cmd := exec.Command("/usr/bin/fping", args...)
 	stdout, err := cmd.StdoutPipe()
 	herr(err)
@@ -119,7 +139,7 @@ func readPoints(config *toml.Tree, con *client.Client) {
 		fields := strings.Fields(text)
 		// Ignore timestamp
 		if len(fields) > 1 {
-			host := fields[0]
+			ip := fields[0]
 			data := fields[4]
 			dataSplitted := strings.FieldsFunc(data, slashSplitter)
 			// Remove ,
@@ -132,8 +152,8 @@ func readPoints(config *toml.Tree, con *client.Client) {
 				td := strings.FieldsFunc(times, slashSplitter)
 				min, avg, max = td[0], td[1], td[2]
 			}
-			log.Printf("Host:%s, loss: %s, min: %s, avg: %s, max: %s", host, lossp, min, avg, max)
-			writePoints(config, con, host, sent, recv, lossp, min, avg, max)
+			log.Printf("Node:%s, IP:%s, loss: %s, min: %s, avg: %s, max: %s", nodes[ip], ip, lossp, min, avg, max)
+			writePoints(config, con, nodes, ip, sent, recv, lossp, min, avg, max)
 		}
 	}
 	std := bufio.NewReader(stdout)
@@ -142,8 +162,9 @@ func readPoints(config *toml.Tree, con *client.Client) {
 	log.Printf("stdout:%s", line)
 }
 
-func writePoints(config *toml.Tree, con *client.Client, host string, sent string, recv string, lossp string, min string, avg string, max string) {
+func writePoints(config *toml.Tree, con *client.Client, nodes map[string]string, ip string, sent string, recv string, lossp string, min string, avg string, max string) {
 	db := config.Get("influxdb.db").(string)
+	ms := config.Get("influxdb.measurement").(string)
 	loss, _ := strconv.Atoi(lossp)
 	pts := make([]client.Point, 1)
 	fields := map[string]interface{}{}
@@ -163,9 +184,10 @@ func writePoints(config *toml.Tree, con *client.Client, host string, sent string
 		}
 	}
 	pts[0] = client.Point{
-		Measurement: "ping",
+		Measurement: ms,
 		Tags: map[string]string{
-			"host": host,
+			"node": nodes[ip],
+			"addr": ip,
 		},
 		Fields:    fields,
 		Time:      time.Now(),
@@ -181,20 +203,17 @@ func writePoints(config *toml.Tree, con *client.Client, host string, sent string
 	if err != nil {
 		log.Fatal(err)
 	}
-	daemon.SdNotify(false, "READY=1") // daemon fping
 }
 
 func main() {
-	getHost(url_consul)
+
 	config, err := toml.LoadFile(path)
-	if err != nil {
-		fmt.Println("Error:", err.Error())
-		os.Exit(1)
-	}
+	herr(err)
+
+	consulurl := config.Get("consul.url").(string)
 
 	host := config.Get("influxdb.host").(string)
 	port := config.Get("influxdb.port").(string)
-	//measurement := config.Get("influxdb.measurement").(string)
 	username := config.Get("influxdb.user").(string)
 	password := config.Get("influxdb.pass").(string)
 
@@ -202,6 +221,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	conf := client.Config{
 		URL:      *u,
 		Username: username,
@@ -217,7 +237,11 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("Connected to influxdb! %v, %s", dur, ver)
 
-	readPoints(config, con)
+	log.Printf("Connected to influxdb! (dur:%v, ver:%s)", dur, ver)
+
+	newnodes = getNodes(consulurl)
+
+	go watchNodes(consulurl)
+	readPoints(config, con, newnodes)
 }

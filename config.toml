@@ -9,16 +9,4 @@ pass = "fpingd18071702c48"
 
 [consul]
 
-url = "http://localhost/v1/catalog/nodes"
-
-
-[hosts]
-nodes = [
-	"b827eb3068d3am13k",
-	"consulnode"
-]
-
-hosts = [
-"192.168.200.121",
-"192.168.114.30"
-]
+url = "http://a:a@consul1.dx/v1/catalog/nodes"
