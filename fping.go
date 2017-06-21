@@ -15,6 +15,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -25,6 +26,7 @@ const (
 var (
 	newnodes = make(map[string]string)
 	oldnodes = make(map[string]string)
+	wg       sync.WaitGroup
 	config   *toml.Tree
 	con      *client.Client
 	change   bool = false
@@ -114,10 +116,9 @@ func slashSplitter(c rune) bool {
 }
 
 func readPoints(config *toml.Tree, con *client.Client, nodes map[string]string) {
-
 	args := []string{"-B 1", "-D", "-r0", "-O 0", "-Q 10", "-p 1000", "-l"}
 	list := []string{}
-	for u := range nodes {
+	for u := range newnodes {
 		ip := u
 		args = append(args, ip)
 		list = append(list, ip)
@@ -126,6 +127,7 @@ func readPoints(config *toml.Tree, con *client.Client, nodes map[string]string) 
 
 	log.Printf("Going to ping the following ips: %v", list)
 	cmd := exec.Command("/usr/bin/fping", args...)
+
 	stdout, err := cmd.StdoutPipe()
 	herr(err)
 	stderr, err := cmd.StderrPipe()
@@ -243,5 +245,7 @@ func main() {
 	newnodes = getNodes(consulurl)
 
 	go watchNodes(consulurl)
+
 	readPoints(config, con, newnodes)
+
 }
