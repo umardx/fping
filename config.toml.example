@@ -1,0 +1,12 @@
+[influxdb]
+
+host = "192.168.114.30"
+port = "8086"
+db = "fping"
+measurement = "ping"
+user = "fping"
+pass = "fpingpassword"
+
+[consul]
+
+url = "http://username:password@consul1.dx/v1/catalog/nodes"
