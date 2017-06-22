@@ -5,8 +5,8 @@ port = "8086"
 db = "fping"
 measurement = "ping"
 user = "fping"
-pass = "fpingd18071702c48"
+pass = "fpingpassword"
 
 [consul]
 
-url = "http://a:a@consul1.dx/v1/catalog/nodes"
+url = "http://username:password@consul1.dx/v1/catalog/nodes"
