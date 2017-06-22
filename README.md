@@ -4,17 +4,20 @@ Parse fping output, store result in influxdb 0.9, and visualizing with grafana.
 #### Edit config.toml:
 
 ```
+[influxdb]
+
 host = "192.168.114.30"
 port = "8086"
 db = "fping"
 measurement = "ping"
+precision = "ms"
+retentionpolicy = "infinite"
 user = "fping"
-pass = "passwordforfping"
+pass = "fpingdakjwgkawjnmbjhwtuia"
 
 [consul]
 
 url = "http://a:a@consul1.dx/v1/catalog/nodes"
-
 ```
 #### Install fping:
 ```
