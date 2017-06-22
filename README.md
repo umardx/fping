@@ -9,7 +9,7 @@ port = "8086"
 db = "fping"
 measurement = "ping"
 user = "fping"
-pass = "fpingd18071702c48"
+pass = "passwordforfping"
 
 [consul]
 
