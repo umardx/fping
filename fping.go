@@ -4,16 +4,17 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"github.com/influxdata/influxdb/client"
+	"github.com/influxdata/influxdb/client/v2"
 	"github.com/pelletier/go-toml"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"net/url"
 	"os"
 	"os/exec"
+	"reflect"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -22,9 +23,9 @@ const (
 )
 
 var (
-	nodes  = make(map[string]string)
-	config *toml.Tree
-	con    *client.Client
+	newnodes      = make(map[string]string)
+	oldnodes      = make(map[string]string)
+	change   bool = false
 )
 
 type Consul []struct {
@@ -40,6 +41,26 @@ type Consul []struct {
 	} `json:"Meta"`
 	CreateIndex int `json:"CreateIndex"`
 	ModifyIndex int `json:"ModifyIndex"`
+}
+
+func watchNodes(consulurl string) {
+	var first bool = true
+	for {
+		newnodes = getNodes(consulurl)
+		// Check if any change of consul nodes
+		if reflect.DeepEqual(newnodes, oldnodes) {
+			// give time for requests newnodes
+			time.Sleep(5 * time.Second)
+		} else {
+			if first {
+				first = false
+			} else {
+				log.Println("Nodes updated : Restarting fping")
+				change = true
+			}
+			oldnodes = newnodes
+		}
+	}
 }
 
 func getNodes(consulurl string) (nodes map[string]string) {
@@ -93,7 +114,7 @@ func slashSplitter(c rune) bool {
 func readPoints(config *toml.Tree, con *client.Client, nodes map[string]string) {
 	args := []string{"-B 1", "-D", "-r0", "-O 0", "-Q 10", "-p 1000", "-l"}
 	list := []string{}
-	for u := range nodes {
+	for u := range newnodes {
 		ip := u
 		args = append(args, ip)
 		list = append(list, ip)
@@ -217,8 +238,10 @@ func main() {
 
 	log.Printf("Connected to influxdb! (dur:%v, ver:%s)", dur, ver)
 
-	nodes = getNodes(consulurl)
+	newnodes = getNodes(consulurl)
 
-	readPoints(config, con, nodes)
+	go watchNodes(consulurl)
+
+	readPoints(config, con, newnodes)
 
 }
