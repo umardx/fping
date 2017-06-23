@@ -1,5 +1,5 @@
 ## fping Monitoring with Infping/InfluxDB/Grafana + Daemon SystemD
-Parse fping output, store result in influxdb 0.9, and visualizing with grafana.
+Parse fping output, store result in influxdb 1.2, and visualizing with grafana.
 
 #### Edit config.toml:
 
