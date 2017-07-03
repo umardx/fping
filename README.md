@@ -1,4 +1,4 @@
-## fping Monitoring with Infping/InfluxDB/Grafana + Daemon SystemD
+## infping Monitoring with fping/InfluxDB/Grafana + Daemon SystemD
 Parse fping output, store result in influxdb 1.2, and visualizing with grafana.
 
 #### Requirement:
@@ -27,7 +27,7 @@ pass = "fpingdakjwgkawjnmbjhwtuia"
 
 url = "http://a:a@consul1.dx/v1/catalog/nodes"
 ```
-#### Install fping:
+#### Install infping:
 ```
 $ ./setup.sh
 $ sudo systemctl status infping.service
