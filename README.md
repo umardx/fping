@@ -47,5 +47,5 @@ $ sudo systemctl status infping.service
 $ consul members
 Node        		Address              Status  Type    Build  Protocol  DC
 consulnode  		192.168.114.30:8301  alive   server  0.8.3  2         dc1
-b827eb3068d3am13k	192.168.200.121:8301 alive	 client  0.8.3  2		  dc1
+b827eb3068d3am13k	192.168.200.121:8301 alive   client  0.8.3  2         dc1
 ```
