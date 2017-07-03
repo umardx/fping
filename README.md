@@ -41,3 +41,11 @@ $ sudo systemctl status infping.service
 2017/06/21 20:01:12 Node:b827eb3068d3am13k, IP:192.168.200.121, loss: 0, min: 5.83, avg: 17.3, max: 76.4
 2017/06/21 20:01:12 Node:consulnode, IP:192.168.114.30, loss: 0, min: 0.47, avg: 0.59, max: 0.68
 ```
+
+#### Consul Members
+```
+$ consul members
+Node        		Address              Status  Type    Build  Protocol  DC
+consulnode  		192.168.114.30:8301  alive   server  0.8.3  2         dc1
+b827eb3068d3am13k	192.168.200.121:8301 alive	 client  0.8.3  2		  dc1
+```
