@@ -1,6 +1,14 @@
 ## fping Monitoring with Infping/InfluxDB/Grafana + Daemon SystemD
 Parse fping output, store result in influxdb 1.2, and visualizing with grafana.
 
+#### Requirement:
+##### Golang:
+Install golang : https://golang.org/doc/install
+##### Fping
+```
+$ sudo apt-get install fping
+```
+
 #### Edit config.toml:
 
 ```
@@ -21,9 +29,8 @@ url = "http://a:a@consul1.dx/v1/catalog/nodes"
 ```
 #### Install fping:
 ```
-$ go install $GOPATH/src/github.com/umardx/fping
-$ mv $GOPATH/bin/fping $GOPATH/src/github.com/umardx/fping/
-$ ./fping
+$ ./setup.sh
+$ sudo systemctl status infping.service
 
 ```
 

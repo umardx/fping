@@ -1,0 +1,17 @@
+[Unit]
+Description=infPing
+Requires=network-online.target
+After=network-online.target consul.service
+
+[Service]
+Type=idle
+User=root
+Group=root
+WorkingDirectory=/home/umar/go/src/github.com/umardx/fping
+PIDFile=/var/run/infping.pid
+ExecStart=/home/umar/go/src/github.com/umardx/fping/infping
+ExecReload=/bin/kill -HUP $MAINPID
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target
