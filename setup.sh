@@ -3,7 +3,7 @@
 pwd="$(pwd)"
 
 # Go install
-go build infping.go
+go build -o infping infping.go
 
 # Create infping.service
 
