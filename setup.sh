@@ -1,6 +1,6 @@
 #!/bin/bash
 # Print work dir
-pwd="$(pwd)"
+pwd="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
 # Go install
 go build -o infping infping.go

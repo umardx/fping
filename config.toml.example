@@ -11,4 +11,4 @@ pass = "fpingdakjwgkawjnmbjhwtuia"
 
 [consul]
 
-url = "http://a:a@consul1.dx/v1/catalog/nodes"
+url = "http://127.0.0.1:8500/v1/catalog/nodes"
