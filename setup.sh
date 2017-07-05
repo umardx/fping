@@ -23,6 +23,9 @@ ExecStart=$pwd/infping
 ExecReload=/bin/kill -HUP $MAINPID
 KillSignal=SIGINT
 
+# Give a reasonable amount of time for the server to start up/shut down
+RestartSec=5
+
 [Install]
 WantedBy=multi-user.target
 EOF
